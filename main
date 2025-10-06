@@ -1,0 +1,94 @@
+// main.js
+import Carrito from './carrito.js';
+
+const API_URL = 'http://jsonblob.com/1424855677813317632';
+
+const shoppingCartContainer = document.querySelector('.shoppingCartItemsContainer');
+const shoppingCartTotal = document.querySelector('.shoppingCartTotal');
+const comprarButton = document.querySelector('.comprarButton');
+
+const carrito = new Carrito('€');
+
+// Cargar productos desde la API
+fetch(API_URL)
+  .then((res) => res.json())
+  .then((data) => renderProducts(data.products))
+  .catch((err) => console.error('Error al cargar productos:', err));
+
+// Renderizar productos en la tienda
+function renderProducts(products) {
+  const container = document.querySelector('.product-list');
+  container.innerHTML = '';
+
+  products.forEach((p) => {
+    const div = document.createElement('div');
+    div.classList.add('item');
+    div.innerHTML = `
+      <img src="${p.image}" alt="${p.title}" class="item-image" />
+      <h5 class="item-title">${p.title}</h5>
+      <p class="item-price">${p.price}€</p>
+      <button class="btn btn-primary addToCart">Agregar al carrito</button>
+    `;
+    container.appendChild(div);
+  });
+
+  // Activar eventos de los botones "Agregar"
+  document.querySelectorAll('.addToCart').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const item = e.target.closest('.item');
+      const title = item.querySelector('.item-title').textContent;
+      const price = item.querySelector('.item-price').textContent.replace('€', '');
+      const image = item.querySelector('.item-image').src;
+
+      carrito.addItem(title, price, image);
+      updateCartUI();
+    });
+  });
+}
+
+// Actualizar el carrito en la interfaz
+function updateCartUI() {
+  shoppingCartContainer.innerHTML = '';
+  const resumen = carrito.obtenerCarrito();
+
+  resumen.products.forEach((p) => {
+    const div = document.createElement('div');
+    div.classList.add('shoppingCartItem');
+    div.innerHTML = `
+      <div class="row">
+        <div class="col-6 d-flex align-items-center">
+          <img src="${p.image}" class="shopping-cart-image">
+          <h6 class="shoppingCartItemTitle ml-3 mb-0">${p.title}</h6>
+        </div>
+        <div class="col-2 d-flex align-items-center">
+          <p class="shoppingCartItemPrice mb-0">${p.price}€</p>
+        </div>
+        <div class="col-4 d-flex align-items-center">
+          <input type="number" class="shoppingCartItemQuantity" min="1" value="${p.quantity}">
+          <button class="btn btn-danger buttonDelete">X</button>
+        </div>
+      </div>
+    `;
+    shoppingCartContainer.appendChild(div);
+
+    // Listener para eliminar
+    div.querySelector('.buttonDelete').addEventListener('click', () => {
+      carrito.removeItem(p.title);
+      updateCartUI();
+    });
+
+    // Listener para cambiar cantidad
+    div.querySelector('.shoppingCartItemQuantity').addEventListener('change', (e) => {
+      carrito.updateQuantity(p.title, e.target.value);
+      updateCartUI();
+    });
+  });
+
+  shoppingCartTotal.textContent = `${resumen.total}€`;
+}
+
+// Vaciar carrito
+comprarButton.addEventListener('click', () => {
+  carrito.clear();
+  updateCartUI();
+});
